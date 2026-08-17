@@ -1,0 +1,199 @@
+plugins {
+    id "java"
+}
+
+group = "hidewhatprocessorsshow"
+version = "1.0.0"
+
+def modName = "HideWhatProcessorsShow"
+def releaseVersion = project.version.toString()
+def mindustryVersion = (findProperty("mindustryVersion") ?: "v154.3").toString()
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+repositories {
+    mavenCentral()
+    maven { url "https://jitpack.io" }
+}
+
+def workspaceRoot = new File((findProperty("workspaceRoot") ?: rootDir.parentFile.absolutePath).toString())
+def toolProjectDir = new File(workspaceRoot, rootDir.name)
+def localCoreClassDirs = [
+    new File(workspaceRoot, "MindustryX-main/work/core/build/classes/java/main"),
+    new File(workspaceRoot, "MindustryX-main/work/core/build/classes/kotlin/main"),
+    new File(workspaceRoot, "Mindustry-master/core/build/classes/java/main")
+].findAll { it.isDirectory() }
+def localArcClassDirs = [
+    new File(workspaceRoot, "MindustryX-main/Arc/arc-core/build/classes/java/main"),
+    new File(workspaceRoot, "Arc/arc-core/build/classes/java/main")
+].findAll { it.isDirectory() }
+
+dependencies {
+    if (!localCoreClassDirs.isEmpty()) {
+        compileOnly files(localCoreClassDirs as File[])
+        compileOnly files(localArcClassDirs as File[])
+    } else {
+        compileOnly "com.github.Anuken.MindustryJitpack:core:${mindustryVersion}"
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_1_9)) {
+        options.release.set(8)
+    }
+}
+
+tasks.withType(Jar).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+def isWindows = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
+
+def findD8 = {
+    if (isWindows) {
+        def workspaceCandidates = (workspaceRoot.listFiles() ?: [])
+            .findAll { it.isDirectory() && it.name.startsWith("commandlinetools-win-") }
+            .sort { a, b -> b.name <=> a.name }
+
+        for (def directory : workspaceCandidates) {
+            def executable = new File(directory, "cmdline-tools/bin/d8.bat")
+            if (executable.exists()) return executable
+        }
+    }
+
+    def explicit = System.getenv("D8_PATH")
+    if (explicit) {
+        def file = new File(explicit)
+        if (file.exists()) return file
+    }
+
+    def sdkRoot = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
+    if (sdkRoot) {
+        def buildTools = new File(sdkRoot, "build-tools")
+        def toolName = isWindows ? "d8.bat" : "d8"
+        def candidates = (buildTools.listFiles() ?: [])
+            .findAll { it.isDirectory() }
+            .sort { a, b -> b.name <=> a.name }
+
+        for (def directory : candidates) {
+            def executable = new File(directory, toolName)
+            if (executable.exists()) return executable
+        }
+    }
+
+    return null
+}
+
+def findAndroidJar = {
+    def workspaceCandidates = [
+        new File(workspaceRoot, ".tmp-ovulam-android-sdk/platforms/android-36/android.jar"),
+        new File(workspaceRoot, "MindustryX-main/Arc/backends/backend-android/libs/android.jar"),
+        new File(workspaceRoot, "Arc/backends/backend-android/libs/android.jar")
+    ]
+    def workspaceJar = workspaceCandidates.find { it.exists() }
+    if (workspaceJar != null) return workspaceJar
+
+    def sdkRoot = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
+    if (!sdkRoot) return null
+
+    def platforms = new File(sdkRoot, "platforms")
+    def candidate = (platforms.listFiles() ?: [])
+        .findAll { it.isDirectory() && new File(it, "android.jar").exists() }
+        .sort { a, b -> b.name <=> a.name }
+        .find()
+
+    return candidate == null ? null : new File(candidate, "android.jar")
+}
+
+def d8InputJar = tasks.register("d8InputJar", Jar) {
+    dependsOn tasks.named("classes")
+    archiveFileName = "${modName}-d8-input.jar"
+    destinationDirectory = layout.buildDirectory.dir("d8-input")
+    from(sourceSets.main.output.classesDirs)
+}
+
+def dexOutput = layout.buildDirectory.dir("d8").get().asFile
+def dexToolOutput = new File(toolProjectDir, "build/d8")
+def d8ToolInputJar = new File(toolProjectDir, "build/d8-input/${modName}-d8-input.jar")
+
+tasks.register("dexAndroid", Exec) {
+    dependsOn d8InputJar
+
+    doFirst {
+        def d8 = findD8()
+        if (d8 == null) {
+            throw new GradleException("D8 not found. Set D8_PATH or ANDROID_SDK_ROOT/ANDROID_HOME.")
+        }
+
+        delete(dexOutput)
+        dexOutput.mkdirs()
+
+        commandLine d8.absolutePath
+        args "--min-api", "14", "--release", "--output", dexToolOutput.absolutePath
+
+        def androidJar = findAndroidJar()
+        if (androidJar != null) {
+            args "--lib", androidJar.absolutePath
+        }
+        configurations.compileClasspath.files.each { dependency ->
+            args "--classpath", dependency.absolutePath
+        }
+
+        args d8ToolInputJar.absolutePath
+    }
+}
+
+def mergedJar = tasks.register("jarMerged", Jar) {
+    dependsOn tasks.named("classes")
+    dependsOn tasks.named("dexAndroid")
+    archiveFileName = "${modName}.jar"
+    destinationDirectory = layout.projectDirectory.dir("dist")
+    from(sourceSets.main.output)
+    from(dexOutput) {
+        include "classes.dex"
+    }
+    from(projectDir) {
+        include "mod.json"
+    }
+}
+
+def distDir = new File(rootDir, "dist")
+def buildOutDir = new File(rootDir.parentFile, "构建/${modName}")
+
+tasks.named("clean") {
+    delete distDir
+}
+
+def releaseZip = tasks.register("releaseZip", Zip) {
+    dependsOn mergedJar
+    archiveFileName = "${modName}.zip"
+    destinationDirectory = layout.projectDirectory.dir("dist")
+
+    from(mergedJar.flatMap { it.archiveFile })
+    from("README.md")
+    from("README_zh.md")
+}
+
+tasks.register("copyReleaseArtifacts", Copy) {
+    dependsOn mergedJar
+    dependsOn releaseZip
+
+    from(mergedJar.flatMap { it.archiveFile }) {
+        rename { _ -> "${modName}-v${releaseVersion}.jar" }
+    }
+    from(releaseZip.flatMap { it.archiveFile }) {
+        rename { _ -> "${modName}-v${releaseVersion}.zip" }
+    }
+    into(buildOutDir)
+    doNotTrackState("Copies release artifacts to the workspace build directory.")
+}
+
+tasks.register("deploy") {
+    group = "build"
+    description = "Builds the universal release JAR and documentation ZIP."
+    dependsOn tasks.named("copyReleaseArtifacts")
+}

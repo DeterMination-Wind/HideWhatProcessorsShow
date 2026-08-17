@@ -1,0 +1,11 @@
+{
+  "name": "HideWhatProcessorsShow",
+  "displayName": "Hide What Processors Show",
+  "author": "DeterMination-Wind",
+  "version": "1.0.0",
+  "minGameVersion": 154,
+  "description": "通过两个独立快捷键隐藏世界处理器特效与动态 Marker，不修改地图逻辑。\nUse separate hotkeys to hide world processor effects and dynamic markers without changing map logic.",
+  "main": "hidewhatprocessorsshow.HideWhatProcessorsShowMod",
+  "hidden": true,
+  "java": true
+}
