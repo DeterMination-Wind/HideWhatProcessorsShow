@@ -1,45 +1,47 @@
 # Hide What Processors Show
 
-[中文](README_zh.md) | [English](README.md)
+> Clear processor-made visual noise without touching the map or its logic.
 
-A small Mindustry client mod that lets you hide visual output created by world processors without changing the map or its logic.
+Hide What Processors Show is a small Mindustry client-side helper for moments when processor effects and dynamic markers make the battlefield difficult to read. It lets you temporarily hide those visual layers while leaving the map, processor code, and game logic unchanged.
 
-## Features
-
-- Press `F9` to show or hide effects emitted by world processor `effect` instructions.
-- Press `F10` to show or hide dynamic markers stored in `state.markers`.
-- Rebind both controls under **Settings > Controls > Processor visibility**.
-- Each switch is independent and displays a short status message when changed.
-
-The filtering is intentionally narrow:
-
-- Normal combat and environmental effects remain visible.
-- Objective markers attached to map objectives remain visible.
-- Marker definitions, processor instructions, and map data are never deleted or modified.
+The two visual layers are independent, so you can keep the information you need and hide only the distraction. It is safe for multiplayer because the change is local to your client.
 
 ## Compatibility
 
-- Mindustry `v154` or newer
-- Vanilla Mindustry and MindustryX
-- Desktop and Android through one universal JAR
+The mod is intended for vanilla Mindustry clients and does not require a server-side installation.
 
 ## Installation
 
-Download `HideWhatProcessorsShow.jar` from the latest GitHub Release and import it from Mindustry's **Mods** menu, or place it in the game's `mods/` directory.
-
-The mod is marked as hidden in its descriptor, so it does not add a content entry to the in-game mod browser. Its keybinds remain available in the controls settings.
+Download HideWhatProcessorsShow.jar from the latest GitHub Release, import it from Mindustry's Mods menu, or place it in the game's mods directory.
 
 ## Build
 
-Requires JDK 8 or newer, Gradle, and an Android SDK containing D8 plus a platform `android.jar`.
+Requires JDK 8 or newer, Gradle, and an Android SDK containing D8 plus a platform android.jar.
 
-```shell
+~~~powershell
 gradle clean deploy
-```
+~~~
 
-Build outputs:
+## 中文
 
-- `dist/HideWhatProcessorsShow.jar` - universal desktop and Android mod JAR
-- `dist/HideWhatProcessorsShow.zip` - release JAR with English and Chinese documentation
+> 清理处理器带来的画面噪声，不触碰地图和逻辑。
 
-Set `ANDROID_SDK_ROOT` or `ANDROID_HOME` when the Android tools are not discoverable automatically. You can also set `D8_PATH` directly to `d8` or `d8.bat`.
+Hide What Processors Show 是一个轻量的 Mindustry 客户端辅助模组。当地图处理器特效和动态标记让战场难以看清时，你可以暂时隐藏这些显示层，而不会修改地图、处理器代码或游戏逻辑。
+
+两种视觉内容可以分别控制，只隐藏当前不需要的部分。它只影响本地客户端，适合多人游戏。
+
+## 兼容性
+
+面向原版 Mindustry 客户端，不需要服务器安装。
+
+## 安装
+
+从最新 GitHub Release 下载 HideWhatProcessorsShow.jar，在游戏的模组页面导入，或放入游戏的 mods 目录。
+
+## 构建
+
+需要 JDK 8 或更高版本、Gradle，以及包含 D8 和平台 android.jar 的 Android SDK。
+
+~~~powershell
+gradle clean deploy
+~~~
