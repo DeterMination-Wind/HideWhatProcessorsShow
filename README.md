@@ -1,5 +1,7 @@
 # Hide What Processors Show
 
+> [NOTE] 若有反馈，请发送反馈到bugsoc@qq.com / If you have any feedback, please send it to bugsoc@qq.com
+
 > Clear processor-made visual noise without touching the map or its logic.
 
 Hide What Processors Show is a small Mindustry client-side helper for moments when processor effects and dynamic markers make the battlefield difficult to read. It lets you temporarily hide those visual layers while leaving the map, processor code, and game logic unchanged.
